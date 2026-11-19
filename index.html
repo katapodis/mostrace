@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Most Race – Civic 1.4i trenažér</title>
+    <script type="module" crossorigin src="./assets/index-De2eBQBg.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BzdPmp6j.css">
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+
+    <!-- ovládání na mobilu: telefon na šířku jako volant, vlevo brzda, vpravo plyn -->
+    <div id="touch" class="hidden">
+      <div id="touch-brake" class="pad brake-pad">BRZDA</div>
+      <div id="touch-gas" class="pad gas-pad">PLYN</div>
+      <div class="touch-top">
+        <button id="touch-reset" aria-label="Návrat na trať">↺</button>
+        <button id="touch-pause" aria-label="Pauza">II</button>
+      </div>
+    </div>
+    <div id="rotate"><div>📱↻<p>Otoč telefon na šířku</p></div></div>
+
+    <div id="hud" class="hidden">
+      <div class="panel times">
+        <div class="row big"><span class="label">Kolo</span><span id="t-current">0:00,000</span></div>
+        <div class="row"><span class="label">Odstup</span><span id="t-delta" class="delta"></span></div>
+        <div class="row"><span class="label">Poslední</span><span id="t-last">–:––,–––</span></div>
+        <div class="row"><span class="label">Nejlepší</span><span id="t-best">–:––,–––</span></div>
+        <div class="sectors">
+          <span id="s1" class="sector">S1</span><span id="s2" class="sector">S2</span><span id="s3" class="sector">S3</span>
+        </div>
+        <div class="row small"><span class="label">Kol</span><span id="t-laps">0</span></div>
+      </div>
+
+      <div id="note" class="note hidden"><span id="note-dist"></span><span id="note-target"></span><span id="note-gear"></span></div>
+      <div id="corner" class="corner"></div>
+      <div id="startlights" class="startlights hidden"><i></i><i></i><i></i><i></i><i></i></div>
+      <div id="toast" class="toast"></div>
+      <div id="warning" class="warning"></div>
+
+      <canvas id="minimap" width="220" height="220"></canvas>
+
+      <div class="panel car">
+        <div class="row"><span class="label">Palivo</span><span id="fuel">50,0 l</span></div>
+        <div class="row"><span class="label">Pneu °C</span>
+          <span class="tyres"><i id="ty0"></i><i id="ty1"></i><i id="ty2"></i><i id="ty3"></i></span>
+        </div>
+        <div class="row small"><span class="label">Opotřebení</span><span id="wear">0 %</span></div>
+        <div class="row small"><span class="label">Brzdy °C</span><span id="brakes">–</span></div>
+        <div class="row small"><span class="label">Spotřeba</span><span id="fuel-lap">–</span></div>
+        <div class="row small"><span class="label">Jízda</span><span id="stint">0:00</span></div>
+        <div class="row small"><span class="label">Kamera</span><span id="cam">Kokpit</span></div>
+        <div class="row small"><span class="label">Ovládání</span><span id="device">Klávesnice</span></div>
+        <div class="row small"><span class="label">Duch</span><span id="ghost-label">–</span></div>
+      </div>
+
+      <div class="dash">
+        <div id="lights" class="lights"></div>
+        <div class="dash-main">
+          <div class="pedals">
+            <div class="bar"><div id="bar-brake" class="fill brake"></div></div>
+            <div class="bar"><div id="bar-throttle" class="fill throttle"></div></div>
+          </div>
+          <div class="gear" id="gear">1</div>
+          <div class="handbrake" id="handbrake" title="Ruční brzda">(P)</div>
+          <div class="speed"><span id="speed">0</span><small>km/h</small></div>
+          <div class="rpm"><span id="rpm">850</span><small>ot./min</small></div>
+        </div>
+        <div class="rpmbar"><div id="rpm-fill"></div></div>
+        <div class="steer"><div id="steer-dot"></div></div>
+      </div>
+    </div>
+
+    <div id="menu" class="overlay">
+      <div class="card">
+        <h1>Autodrom Most <span>4 212 m</span></h1>
+        <h2>Honda Civic 1.4i · 66 kW · semislicky</h2>
+        <div class="buttons">
+          <button id="btn-flying" class="primary">Letmý start <kbd>Enter</kbd></button>
+          <button id="btn-grid">Start z roštu</button>
+          <button id="btn-pit">Výjezd z boxů</button>
+          <button id="btn-demo">Ukázkové kolo (jede počítač)</button>
+        </div>
+        <div class="options">
+          <label><input type="checkbox" id="opt-auto" /> Automatické řazení</label>
+          <label><input type="checkbox" id="opt-line" /> Ideální stopa</label>
+          <label><input type="checkbox" id="opt-ghost" /> Duch</label>
+          <label><input type="checkbox" id="opt-sound" /> Zvuk</label>
+          <label><input type="checkbox" id="opt-wet" /> Mokrá trať</label>
+          <label>Řízení
+            <select id="opt-steer">
+              <option value="0.75">jemné</option>
+              <option value="1">střední</option>
+              <option value="1.3">ostré</option>
+            </select>
+          </label>
+          <label>Provoz
+            <select id="opt-traffic">
+              <option value="0">žádný</option>
+              <option value="4">4 auta</option>
+              <option value="8">8 aut</option>
+            </select>
+          </label>
+          <label id="opt-grid-label">Pozice na roštu
+            <select id="opt-grid"></select>
+          </label>
+          <label>Grafika
+            <select id="opt-quality">
+              <option value="low">nízká</option>
+              <option value="medium">střední</option>
+              <option value="high">vysoká</option>
+            </select>
+          </label>
+          <label>Vzduch
+            <select id="opt-ambient">
+              <option value="5">5 °C</option>
+              <option value="15">15 °C</option>
+              <option value="25">25 °C</option>
+            </select>
+          </label>
+        </div>
+        <div class="columns">
+          <div>
+            <h3>Ovladač PS5</h3>
+            <table>
+              <tr><td>Levá páčka</td><td>řízení</td></tr>
+              <tr><td>R2 / L2</td><td>plyn / brzda</td></tr>
+              <tr><td>R1 nebo ×</td><td>řadit nahoru</td></tr>
+              <tr><td>L1</td><td>řadit dolů</td></tr>
+              <tr><td>□</td><td>ruční brzda</td></tr>
+              <tr><td>△</td><td>kamera</td></tr>
+              <tr><td>○</td><td>ideální stopa</td></tr>
+              <tr><td>Křížek nahoru</td><td>duch</td></tr>
+              <tr><td>Create</td><td>návrat na trať (+2 s)</td></tr>
+              <tr><td>Options</td><td>pauza</td></tr>
+            </table>
+          </div>
+          <div>
+            <h3>Klávesnice</h3>
+            <table>
+              <tr><td>Šipky / WASD</td><td>řízení, plyn, brzda</td></tr>
+              <tr><td>Mezerník</td><td>ruční brzda</td></tr>
+              <tr><td>E / Q</td><td>řadit nahoru / dolů</td></tr>
+              <tr><td>C</td><td>kamera</td></tr>
+              <tr><td>L</td><td>ideální stopa</td></tr>
+              <tr><td>G</td><td>duch</td></tr>
+              <tr><td>R</td><td>návrat na trať (+2 s)</td></tr>
+              <tr><td>P / Esc</td><td>pauza</td></tr>
+            </table>
+          </div>
+        </div>
+        <p class="hint touch-only">Na mobilu: drž telefon na šířku jako volant – náklonem zatáčíš, vpravo dole je plyn, vlevo dole brzda. Nahoře je pauza a návrat na trať.</p>
+        <p class="hint" id="pad-hint">Ovladač PS5: podrž PS + Create, spáruj v Bluetooth a stiskni libovolné tlačítko.</p>
+        <p class="hint" id="best-hint"></p>
+        <button id="btn-clear" class="link">Smazat uložený rekord</button>
+        <button id="btn-setup" class="link">Nastavení auta</button>
+      </div>
+    </div>
+
+    <div id="setup" class="overlay hidden">
+      <div class="card medium">
+        <h1>Nastavení auta</h1>
+        <h2>Přepiš odhady údaji svého Civicu. Po uložení se hra načte znovu a přepočítá ideální stopu.</h2>
+        <form id="setup-form" class="setup-form">
+          <label>Hmotnost s jezdcem, bez paliva (kg)<input id="set-mass" type="number" step="5" min="700" max="1600" /></label>
+          <label>Přilnavost pneumatik μ<input id="set-mu" type="number" step="0.01" min="0.8" max="1.8" /></label>
+          <label>Průměr hnacího kola (cm)<input id="set-wheel" type="number" step="0.1" min="48" max="72" /></label>
+          <label>Stálý převod<input id="set-final" type="number" step="0.001" min="2.5" max="6" /></label>
+          <label>1. stupeň<input id="set-g1" type="number" step="0.001" min="0.5" max="5" /></label>
+          <label>2. stupeň<input id="set-g2" type="number" step="0.001" min="0.5" max="5" /></label>
+          <label>3. stupeň<input id="set-g3" type="number" step="0.001" min="0.5" max="5" /></label>
+          <label>4. stupeň<input id="set-g4" type="number" step="0.001" min="0.5" max="5" /></label>
+          <label>5. stupeň<input id="set-g5" type="number" step="0.001" min="0.5" max="5" /></label>
+        </form>
+        <p class="hint" id="setup-rpm"></p>
+        <p class="hint" id="setup-error"></p>
+        <div class="buttons">
+          <button id="btn-setup-save" class="primary">Uložit a načíst znovu</button>
+          <button id="btn-setup-reset">Výchozí hodnoty</button>
+          <button id="btn-setup-cancel">Zrušit</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pause" class="overlay hidden">
+      <div class="card medium">
+        <h1>Pauza</h1>
+        <canvas id="speed-graph" class="speed-graph hidden" width="1160" height="300"></canvas>
+        <div id="speed-loss" class="analysis"></div>
+        <div id="analysis" class="analysis"></div>
+        <div class="buttons">
+          <button id="btn-resume" class="primary">Pokračovat <kbd>P</kbd></button>
+          <button id="btn-menu">Hlavní nabídka</button>
+        </div>
+      </div>
+    </div>
+
+  </body>
+</html>
